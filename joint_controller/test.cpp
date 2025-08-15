@@ -85,13 +85,41 @@ int main() {
            0,                   1,  0,                    0.0,
           -std::sin(theta_rkp), 0,  std::cos(theta_rkp), -0.16,
            0,                   0,  0,                    1.0;
-
+  vector<double, 3, 1> p_rkp = T_kp.block<3, 1>(0, 0);
   Vector4d T_e(0.0, 0.0, -0.173, 1.0);
 
   Vector4d fk_result = T_wr * T_wp * T_kp * T_e;
   cout << "fk_result: " << fk_result.transpose() << endl;
   
-   // ---------- FK ----------
+  // 20250815 松本追加
+  // ---------- Jacobian ----------
+  Matrix<double, 6, 3> J;
+  J.setZero();
+
+  // omega の定義（回転軸ベクトル）
+  // ここは絶対010
+  Vector3d omega_rwl = (0, 1, 0);
+  Vector3d omega_rwp = T_wp.block<3, 1>(0, 0);
+  Vector3d omega_rkp = T_kp.block<3, 1>(0, 0);
+
+  // p の定義（位置ベクトル）
+  Vector3d p_rwl = vp_c_rwl;
+  Vector3d p_rwp = vp_c_rwl + vp_rwl_rwp;
+  Vector3d p_rkp = vp_c_rwl + vp_rwl_rwp + vp_rwp_rkp;
+  Vector3d p_e   = vp_c_rwl + vp_rwl_rwp + vp_rwp_rkp + vp_rkp_re;
+
+  // 各列の計算: [ z × (pe - pi) ; z ]
+  // 関節0
+  J.block<3,1>(0,0) = omega_rwl.cross(p_e - p_rwl);
+  J.block<3,1>(3,0) = omega_rwl;
+
+  // 関節1
+  J.block<3,1>(0,1) = omega_rwp.cross(p_e - p_rwp);
+  J.block<3,1>(3,1) = omega_rwp;
+
+  // 関節2
+  J.block<3,1>(0,2) = omega_rkp.cross(p_e - p_rkp);
+  J.block<3,1>(3,2) = omega_rkp;
 
 
   return 0;

@@ -85,11 +85,15 @@ int main() {
            0,                   1,  0,                    0.0,
           -std::sin(theta_rkp), 0,  std::cos(theta_rkp), -0.16,
            0,                   0,  0,                    1.0;
-  vector<double, 3, 1> p_rkp = T_kp.block<3, 1>(0, 0);
   Vector4d T_e(0.0, 0.0, -0.173, 1.0);
 
-  Vector4d fk_result = T_wr * T_wp * T_kp * T_e;
-  cout << "fk_result: " << fk_result.transpose() << endl;
+  // 20250815 松本追加
+
+  Matrix4d fk_wr = T_wr;
+  Matrix4d fk_wp = T_wr * T_wp;
+  Matrix4d fk_kp = T_wr * T_wp * T_kp;
+  Vector4d fk_e  = T_wr * T_wp * T_kp * T_e;
+  cout << "fk_e: " << fk_e.transpose() << endl;
   
   // 20250815 松本追加
   // ---------- Jacobian ----------
@@ -97,16 +101,15 @@ int main() {
   J.setZero();
 
   // omega の定義（回転軸ベクトル）
-  // ここは絶対010
-  Vector3d omega_rwl = (0, 1, 0);
-  Vector3d omega_rwp = T_wp.block<3, 1>(0, 0);
-  Vector3d omega_rkp = T_kp.block<3, 1>(0, 0);
+  Vector3d omega_rwl(1,0,0);
+  Vector3d omega_rwp = T_wr.block<3,3>(0,0) * Vector3d(0,1,0);
+  Vector3d omega_rkp = (T_wr*T_wp).block<3,3>(0,0) * Vector3d(0,1,0);;
 
   // p の定義（位置ベクトル）
-  Vector3d p_rwl = vp_c_rwl;
-  Vector3d p_rwp = vp_c_rwl + vp_rwl_rwp;
-  Vector3d p_rkp = vp_c_rwl + vp_rwl_rwp + vp_rwp_rkp;
-  Vector3d p_e   = vp_c_rwl + vp_rwl_rwp + vp_rwp_rkp + vp_rkp_re;
+  Vector3d p_rwl = fk_wr.block<3, 1>(0, 3);
+  Vector3d p_rwp = fk_wp.block<3, 1>(0, 3);
+  Vector3d p_rkp = fk_kp.block<3, 1>(0, 3);
+  Vector3d p_e   = fk_e.block<3, 1>(0, 0);
 
   // 各列の計算: [ z × (pe - pi) ; z ]
   // 関節0
@@ -121,6 +124,16 @@ int main() {
   J.block<3,1>(0,2) = omega_rkp.cross(p_e - p_rkp);
   J.block<3,1>(3,2) = omega_rkp;
 
+  // Jを出力
+  
+  Eigen::IOFormat CleanFmt(4, 0, ", ", "\n", "[", "]");
+  std::cout << "J = \n" << J.format(CleanFmt) << std::endl;
+
+  // --- J の擬似逆行列を計算 ---
+  MatrixXd J_pinv = (J.transpose() * J).inverse() * J.transpose();
+
+  // 出力
+  std::cout << "J_pinv = \n" << J_pinv.format(CleanFmt) << std::endl;
 
   return 0;
 }

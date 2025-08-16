@@ -29,26 +29,14 @@ int main() {
   
 
   // 目標速度（足先）
-  Vector6d target_vel_body(
+  Vector6d target_vel_end(
     0,0,0,0,0,0
   );
-
-
-  // ---- Hello ----
-　//  cout << "Hello, world!" << endl;
 
   // Joint angles
   double theta_rwl = 0.0; // Right Waist Roll
   double theta_rwp = 0.0; // Right Waist Pitch
   double theta_rkp = 0.0; // Right Knee Pitch
-
-  // Target position (from C to RE)
-  Vector3d vp_c_re(
-    0.0,
-    -0.075 + -0.055,
-    -0.16 + -0.173
-  );
-  cout << "vp_c_re: " << vp_c_re.transpose() << endl;
 
   // ---------- IK ----------
   // theta_rwl
@@ -149,10 +137,19 @@ int main() {
   std::cout << "J_pinv = \n" << J_pinv.format(CleanFmt) << std::endl;
 
   // ボディ速度の計算
-  Vector6d calc_vel_body(
-
-  )
+  Vector6d calc_vel_body;
   calc_vel_body.setZero();
+  // 本当はp-pbとなるがpb = 0ならこれでいい
+  calc_vel_body.block<3,1>(0, 0) = target_vel_body.block<3,1>(0, 0) - target_vel_body.block<3,1>(3, 0).cross(p_e);
+  calc_vel_body.block<3,1>(3, 0) = target_vel_body.block<3,1>(3, 0);
+
+  Vector6d calc_vel_end;
+  calc_vel_end.setZero();
+  calc_vel_end = target_vel_end - calc_vel_body;
+
+  Vector3d q_dot;
+  q_dot.setZero();
+  q_dot = J_pinv.cross(calc_vel_end);
 
   return 0;
 }

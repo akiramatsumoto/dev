@@ -17,21 +17,23 @@ int main() {
 
   // 目標位置（足先）
   Vector3d vp_c_re(
-    0.0,
-    -0.075 + -0.055,
-    -std::sqrt(std::pow(0.16, 2.0) + std::pow(0.173, 2.0))
+    0.1,
+    -0.075 + -0.055 + 0.15,
+    -0.16 + -0.173 + 0.1
   );
   cout << "vp_c_re: " << vp_c_re.transpose() << endl;
 
   // 目標速度（重心）
   Vector6d target_vel_body(
-    0.05,0.1,0,0,0,0
+    0.1,0.1,0,0,0,0
   );
   
   // 目標速度（足先）
   Vector6d target_vel_end(
     0.1,0.1,0.1,0,0,0
   );
+  Eigen::IOFormat CleanFmt(4, 0, ", ", "\n", "[", "]");
+  std::cout << "目標速度 = \n" << target_vel_body.format(CleanFmt) << std::endl;
 
   // Joint angles
   double theta_rwl = 0.0; // Right Waist Roll
@@ -105,7 +107,7 @@ int main() {
   cout << "fk_e: " << fk_e.transpose() << endl;
   
   // ---------- Jacobian ----------
-  Matrix<double, 6, 3> J;
+  Matrix<double, 3, 3> J;
   J.setZero();
 
   // omega の定義（回転軸ベクトル）
@@ -122,31 +124,28 @@ int main() {
   // 各列の計算: [ z × (pe - pi) ; z ]
   // 関節0
   J.block<3,1>(0,0) = omega_rwl.cross(p_e - p_rwl);
-  J.block<3,1>(3,0) = omega_rwl;
 
   // 関節1
   J.block<3,1>(0,1) = omega_rwp.cross(p_e - p_rwp);
-  J.block<3,1>(3,1) = omega_rwp;
 
   // 関節2
   J.block<3,1>(0,2) = omega_rkp.cross(p_e - p_rkp);
-  J.block<3,1>(3,2) = omega_rkp;
 
   // Jを出力
-  Eigen::IOFormat CleanFmt(4, 0, ", ", "\n", "[", "]");
-//  std::cout << "J = \n" << J.format(CleanFmt) << std::endl;
+  std::cout << "J = \n" << J.format(CleanFmt) << std::endl;
 
   // Jの擬似逆行列を計算
-  MatrixXd J_pinv = (J.transpose() * J).inverse() * J.transpose();
+  MatrixXd J_pinv = J.inverse();
 
   // 出力
-//  std::cout << "J_pinv = \n" << J_pinv.format(CleanFmt) << std::endl;
+  std::cout << "J_pinv = \n" << J_pinv.format(CleanFmt) << std::endl;
 
+  /*
   // ボディ速度の計算
   Vector6d calc_vel_body;
   calc_vel_body.setZero();
   // 本当はp-pbとなるがpb = 0ならこれでいい
-  calc_vel_body.block<3,1>(0, 0) = target_vel_body.block<3,1>(0, 0) - target_vel_body.block<3,1>(3, 0).cross(p_e.block<3,1>(0,0));
+  calc_vel_body.block<3,1>(0, 0) = target_vel_body.block<3,1>(0, 0) + target_vel_body.block<3,1>(3, 0).cross(p_e.block<3,1>(0,0));
   calc_vel_body.block<3,1>(3, 0) = target_vel_body.block<3,1>(3, 0);
 
   Vector6d calc_vel_end;
@@ -160,6 +159,13 @@ int main() {
   std::cout << "q_dot (deg/s) = \n"
   << q_dot.unaryExpr([&](double v){ return rad2deg(v); }).format(CleanFmt)
   << std::endl;
+
+  // 目標速度に達しているかの確認
+  Vector6d check_vel_end;
+  check_vel_end.setZero();
+  check_vel_end = (J * q_dot) + (calc_vel_body);
+  std::cout << "速度 = \n" << check_vel_end.format(CleanFmt) << std::endl;
+*/
 
   return 0;
 }

@@ -24,13 +24,13 @@ int main() {
   cout << "vp_c_re: " << vp_c_re.transpose() << endl;
 
   // 目標速度（重心）
-  Vector6d target_vel_body(
-    0.1,0.1,0,0,0,0
+  Vector3d target_vel_body(
+    0.1,0.1,0
   );
   
   // 目標速度（足先）
-  Vector6d target_vel_end(
-    0.1,0.1,0.1,0,0,0
+  Vector3d target_vel_end(
+    0.1,0.1,0.1
   );
   Eigen::IOFormat CleanFmt(4, 0, ", ", "\n", "[", "]");
   std::cout << "目標速度 = \n" << target_vel_body.format(CleanFmt) << std::endl;
@@ -117,9 +117,11 @@ int main() {
 
   // p の定義（位置ベクトル）
   Vector3d p_rwl = fk_wr.block<3, 1>(0, 3);
+  //std::cout << "p_rwl = \n" << p_rwl.format(CleanFmt) << std::endl;
   Vector3d p_rwp = fk_wp.block<3, 1>(0, 3);
   Vector3d p_rkp = fk_kp.block<3, 1>(0, 3);
   Vector3d p_e   = fk_e.block<3, 1>(0, 0);
+  //std::cout << "p_e = \n" << p_e.format(CleanFmt) << std::endl;
 
   // 各列の計算: [ z × (pe - pi) ; z ]
   // 関節0
@@ -140,15 +142,16 @@ int main() {
   // 出力
   std::cout << "J_pinv = \n" << J_pinv.format(CleanFmt) << std::endl;
 
-  /*
+  
+
+  // ここの理解がそもそも間違っていたっぽい 
   // ボディ速度の計算
-  Vector6d calc_vel_body;
+  Vector3d calc_vel_body;
   calc_vel_body.setZero();
   // 本当はp-pbとなるがpb = 0ならこれでいい
-  calc_vel_body.block<3,1>(0, 0) = target_vel_body.block<3,1>(0, 0) + target_vel_body.block<3,1>(3, 0).cross(p_e.block<3,1>(0,0));
-  calc_vel_body.block<3,1>(3, 0) = target_vel_body.block<3,1>(3, 0);
+  calc_vel_body.block = target_vel_body.block<3,1>(0, 0) + target_vel_body.block<3,1>(3, 0).cross(p_e.block<3,1>(0,0));
 
-  Vector6d calc_vel_end;
+  Vector3d calc_vel_end;
   calc_vel_end.setZero();
   calc_vel_end = target_vel_end - calc_vel_body;
 
@@ -165,7 +168,7 @@ int main() {
   check_vel_end.setZero();
   check_vel_end = (J * q_dot) + (calc_vel_body);
   std::cout << "速度 = \n" << check_vel_end.format(CleanFmt) << std::endl;
-*/
+
 
   return 0;
 }

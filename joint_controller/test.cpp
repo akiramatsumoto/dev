@@ -10,19 +10,37 @@ int main() {
 
   auto rad2deg = [](double r){ return r * 180.0 / M_PI; };
 
+  // 入力
+
+  // 重心の目標位置を座標系の原点に変えるような処理もあったほうがいい？
+
+  // 目標位置（足先）
+  Vector3d vp_c_re(
+    0.0,
+    -0.075 + -0.055,
+    -0.16 + -0.173
+  );
+  cout << "vp_c_re: " << vp_c_re.transpose() << endl;
+
+  // 目標速度（重心）
+  Vector6d target_vel_body(
+    0,0,0,0,0,0
+  );
+  
+
+  // 目標速度（足先）
+  Vector6d target_vel_body(
+    0,0,0,0,0,0
+  );
+
+
   // ---- Hello ----
-//  cout << "Hello, world!" << endl;
+　//  cout << "Hello, world!" << endl;
 
   // Joint angles
   double theta_rwl = 0.0; // Right Waist Roll
   double theta_rwp = 0.0; // Right Waist Pitch
   double theta_rkp = 0.0; // Right Knee Pitch
-
-  // Link vectors
-  Vector3d vp_c_rwl(-0.091, -0.075,  0.0);
-  Vector3d vp_rwl_rwp( 0.091, -0.055, 0.0);
-  Vector3d vp_rwp_rkp( 0.0  ,  0.0  , -0.16);
-  Vector3d vp_rkp_re ( 0.0  ,  0.0  , -0.173);
 
   // Target position (from C to RE)
   Vector3d vp_c_re(
@@ -31,7 +49,6 @@ int main() {
     -0.16 + -0.173
   );
   cout << "vp_c_re: " << vp_c_re.transpose() << endl;
-
 
   // ---------- IK ----------
   // theta_rwl
@@ -87,15 +104,12 @@ int main() {
            0,                   0,  0,                    1.0;
   Vector4d T_e(0.0, 0.0, -0.173, 1.0);
 
-  // 20250815 松本追加
-
   Matrix4d fk_wr = T_wr;
   Matrix4d fk_wp = T_wr * T_wp;
   Matrix4d fk_kp = T_wr * T_wp * T_kp;
   Vector4d fk_e  = T_wr * T_wp * T_kp * T_e;
   cout << "fk_e: " << fk_e.transpose() << endl;
   
-  // 20250815 松本追加
   // ---------- Jacobian ----------
   Matrix<double, 6, 3> J;
   J.setZero();
@@ -125,15 +139,20 @@ int main() {
   J.block<3,1>(3,2) = omega_rkp;
 
   // Jを出力
-  
   Eigen::IOFormat CleanFmt(4, 0, ", ", "\n", "[", "]");
   std::cout << "J = \n" << J.format(CleanFmt) << std::endl;
 
-  // --- J の擬似逆行列を計算 ---
+  // Jの擬似逆行列を計算
   MatrixXd J_pinv = (J.transpose() * J).inverse() * J.transpose();
 
   // 出力
   std::cout << "J_pinv = \n" << J_pinv.format(CleanFmt) << std::endl;
+
+  // ボディ速度の計算
+  Vector6d calc_vel_body(
+
+  )
+  calc_vel_body.setZero();
 
   return 0;
 }

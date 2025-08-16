@@ -7,6 +7,7 @@ int main() {
   using namespace Eigen;
   using std::cout;
   using std::endl;
+  using Vector6d = Eigen::Matrix<double, 6, 1>;
 
   auto rad2deg = [](double r){ return r * 180.0 / M_PI; };
 
@@ -18,25 +19,30 @@ int main() {
   Vector3d vp_c_re(
     0.0,
     -0.075 + -0.055,
-    -0.16 + -0.173
+    -std::sqrt(std::pow(0.16, 2.0) + std::pow(0.173, 2.0))
   );
   cout << "vp_c_re: " << vp_c_re.transpose() << endl;
 
   // 目標速度（重心）
   Vector6d target_vel_body(
-    0,0,0,0,0,0
+    0.05,0.1,0,0,0,0
   );
   
-
   // 目標速度（足先）
   Vector6d target_vel_end(
-    0,0,0,0,0,0
+    0.1,0.1,0.1,0,0,0
   );
 
   // Joint angles
   double theta_rwl = 0.0; // Right Waist Roll
   double theta_rwp = 0.0; // Right Waist Pitch
   double theta_rkp = 0.0; // Right Knee Pitch
+
+  // Link vectors
+  Vector3d vp_c_rwl(-0.091, -0.075,  0.0);
+  Vector3d vp_rwl_rwp( 0.091, -0.055, 0.0);
+  Vector3d vp_rwp_rkp( 0.0  ,  0.0  , -0.16);
+  Vector3d vp_rkp_re ( 0.0  ,  0.0  , -0.173);
 
   // ---------- IK ----------
   // theta_rwl
@@ -128,19 +134,19 @@ int main() {
 
   // Jを出力
   Eigen::IOFormat CleanFmt(4, 0, ", ", "\n", "[", "]");
-  std::cout << "J = \n" << J.format(CleanFmt) << std::endl;
+//  std::cout << "J = \n" << J.format(CleanFmt) << std::endl;
 
   // Jの擬似逆行列を計算
   MatrixXd J_pinv = (J.transpose() * J).inverse() * J.transpose();
 
   // 出力
-  std::cout << "J_pinv = \n" << J_pinv.format(CleanFmt) << std::endl;
+//  std::cout << "J_pinv = \n" << J_pinv.format(CleanFmt) << std::endl;
 
   // ボディ速度の計算
   Vector6d calc_vel_body;
   calc_vel_body.setZero();
   // 本当はp-pbとなるがpb = 0ならこれでいい
-  calc_vel_body.block<3,1>(0, 0) = target_vel_body.block<3,1>(0, 0) - target_vel_body.block<3,1>(3, 0).cross(p_e);
+  calc_vel_body.block<3,1>(0, 0) = target_vel_body.block<3,1>(0, 0) - target_vel_body.block<3,1>(3, 0).cross(p_e.block<3,1>(0,0));
   calc_vel_body.block<3,1>(3, 0) = target_vel_body.block<3,1>(3, 0);
 
   Vector6d calc_vel_end;
@@ -149,7 +155,11 @@ int main() {
 
   Vector3d q_dot;
   q_dot.setZero();
-  q_dot = J_pinv.cross(calc_vel_end);
+  q_dot = J_pinv * calc_vel_end;
+
+  std::cout << "q_dot (deg/s) = \n"
+  << q_dot.unaryExpr([&](double v){ return rad2deg(v); }).format(CleanFmt)
+  << std::endl;
 
   return 0;
 }

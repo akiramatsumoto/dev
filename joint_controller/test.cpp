@@ -8,10 +8,11 @@ int main() {
   using std::cout;
   using std::endl;
   using Vector6d = Eigen::Matrix<double, 6, 1>;
-
+  Eigen::IOFormat CleanFmt(4, 0, ", ", "\n", "[", "]");
   auto rad2deg = [](double r){ return r * 180.0 / M_PI; };
 
   // 入力
+  std::cout << "入力"<< std::endl;
 
   // 重心の目標位置を座標系の原点に変えるような処理もあったほうがいい？
 
@@ -21,19 +22,19 @@ int main() {
     -0.075 + -0.055 + 0.15,
     -0.16 + -0.173 + 0.1
   );
-  cout << "vp_c_re: " << vp_c_re.transpose() << endl;
+  std::cout << "目標位置（足先） = \n" << vp_c_re.format(CleanFmt) << std::endl;
 
   // 目標速度（重心） 6次元
   Vector6d target_vel_body(
     0.1, 0.1, 0, 0, 0, 0
   );
-  
+  std::cout << "目標速度（重心） = \n" << target_vel_body.format(CleanFmt) << std::endl;
+
   // 目標速度（足先） 3次元
   Vector3d target_vel_end(
     0.1, 0.1, 0.2
   );
-  Eigen::IOFormat CleanFmt(4, 0, ", ", "\n", "[", "]");
-  std::cout << "目標速度 = \n" << target_vel_body.format(CleanFmt) << std::endl;
+  std::cout << "目標速度（足先） = \n" << target_vel_end.format(CleanFmt) << std::endl;
 
   // Joint angles
   double theta_rwl = 0.0; // Right Waist Roll
@@ -50,7 +51,9 @@ int main() {
   // theta_rwl
   theta_rwl = M_PI/2.0 - std::atan2(std::abs(vp_c_re.z()),
                                     vp_c_re.y() - (vp_c_rwl.y() + vp_rwl_rwp.y()));
-  cout << "theta_rwl: " << rad2deg(theta_rwl) << endl;
+  std::cout << "\n出力"<< std::endl;
+  std::cout << "関節位置 ="<< std::endl;
+  cout << "[" << rad2deg(theta_rwl) << "]" << endl;
 
   // T_wr
   Eigen::Matrix4d T_wr;
@@ -82,8 +85,8 @@ int main() {
 
   theta_rwp = -(foo + bar); // direction correction
   cout << std::fixed << std::setprecision(6);
-  cout << "theta_rwp: " << rad2deg(theta_rwp) << endl;
-  cout << "theta_rkp: " << rad2deg(theta_rkp) << endl;
+  cout << "[" << rad2deg(theta_rwp) << "]" << endl;
+  cout << "[" << rad2deg(theta_rkp) << "]" << endl;
 
   
   // ---------- FK ----------
@@ -104,7 +107,7 @@ int main() {
   Matrix4d fk_wp = T_wr * T_wp;
   Matrix4d fk_kp = T_wr * T_wp * T_kp;
   Vector4d fk_e  = T_wr * T_wp * T_kp * T_e;
-  cout << "fk_e: " << fk_e.transpose() << endl;
+  //cout << "fk_e: " << fk_e.transpose() << endl;
   
   // ---------- Jacobian ----------
   Matrix<double, 3, 3> J;
@@ -134,13 +137,13 @@ int main() {
   J.block<3,1>(0,2) = omega_rkp.cross(p_e - p_rkp);
 
   // Jを出力
-  std::cout << "J = \n" << J.format(CleanFmt) << std::endl;
+  //std::cout << "J = \n" << J.format(CleanFmt) << std::endl;
 
   // Jの擬似逆行列を計算
   MatrixXd J_inv = J.inverse();
 
   // 出力
-  std::cout << "J_inv = \n" << J_inv.format(CleanFmt) << std::endl;
+  //std::cout << "J_inv = \n" << J_inv.format(CleanFmt) << std::endl;
 
   // ボディ速度の計算
   Vector3d calc_vel_body;
@@ -156,16 +159,18 @@ int main() {
   q_dot.setZero();
   q_dot = J_inv * calc_vel_end;
 
-  std::cout << "q_dot (deg/s) = \n"
+  std::cout << "関節速度 = \n"
   << q_dot.unaryExpr([&](double v){ return rad2deg(v); }).format(CleanFmt)
   << std::endl;
 
+  // テスト　あっているか怪しくなったらつかう
+/*
   // 目標速度に達しているかの確認
   Vector3d check_vel_end;
   check_vel_end.setZero();
   check_vel_end = (J * q_dot) + (calc_vel_body);
   std::cout << "速度 = \n" << check_vel_end.format(CleanFmt) << std::endl;
-
+*/
   return 0;
 }
 
